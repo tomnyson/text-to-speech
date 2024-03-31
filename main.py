@@ -4,6 +4,7 @@ from gtts import gTTS
 from pydantic import BaseModel
 import os
 import uuid
+from fastapi.responses import StreamingResponse
 
 app = FastAPI()
 
@@ -45,3 +46,16 @@ def download_file(filename: str):
         return FileResponse(path=filepath, media_type="audio/mp3", filename=filename)
     else:
         raise HTTPException(status_code=404, detail="File not found")
+
+
+@app.get("/stream/{filename}")
+async def stream_file(filename: str):
+    filepath = os.path.join(AUDIO_FILES_DIRECTORY, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    def iterfile():
+        with open(filepath, mode="rb") as file_like:
+            yield from file_like
+
+    return StreamingResponse(iterfile(), media_type="audio/mp3")
